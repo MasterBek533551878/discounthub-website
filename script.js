@@ -333,8 +333,8 @@ function renderPartnerOfferCards(items) {
   if (!offers.length) {
     container.innerHTML = `
       <div class="preview-empty partner-empty">
-        <strong>Partner offers are ready.</strong>
-        <span>Add more founder discounts from the admin panel and this block will update automatically.</span>
+        <strong>Partner offers are coming soon.</strong>
+        <span>New founder and store discounts will appear here when they are available.</span>
         <a href="contact.html">Submit an offer</a>
       </div>
     `;
@@ -375,7 +375,7 @@ function renderStoreCloud(facets) {
 
   if (!stores.length) return;
   container.innerHTML = stores.map((store) => `
-    <a href="/deals/?platform=${encodeURIComponent(store.name)}" title="${escapeHtml(store.count)} live offers on DiscountHub">
+    <a href="/deals/?platform=${encodeURIComponent(store.name)}" title="${escapeHtml(store.count)} offers on DiscountHub">
       ${escapeHtml(store.name)} <small>${escapeHtml(store.count)}</small>
     </a>
   `).join('');
@@ -1019,7 +1019,7 @@ async function initDealsBrowser() {
       state.params = readFormParams(form);
       updateBrowserUrl(state.params);
     }
-    setStatus('deals-status', state.page === 1 ? 'Loading live deals…' : 'Loading more deals…');
+    setStatus('deals-status', state.page === 1 ? 'Loading deals…' : 'Loading more deals…');
     setLoadMore('deals-load-more', false);
     try {
       const data = await fetchJson('/deals', { ...state.params, currency: 'USD', page: state.page, page_size: FULL_PAGE_SIZE });
@@ -1028,11 +1028,11 @@ async function initDealsBrowser() {
       if (state.page === 1 && !items.length) renderEmpty(container, 'No deals found', 'Try a different search, store or discount filter.');
       else container.insertAdjacentHTML('beforeend', items.map(dealCardMarkup).join(''));
       const total = Number(data?.total || 0);
-      setStatus('deals-status', total ? `Showing ${Math.min(state.page * FULL_PAGE_SIZE, total)} of ${total} live deals` : `${items.length} live deals loaded`);
+      setStatus('deals-status', total ? `Showing ${Math.min(state.page * FULL_PAGE_SIZE, total)} of ${total} deals` : `${items.length} deals loaded`);
       setLoadMore('deals-load-more', state.hasNext, 'Load more deals');
       if (state.hasNext) state.page += 1;
     } catch (_) {
-      renderEmpty(container, 'Deals are loading slowly', 'Please refresh the page or open the iOS app if the API is temporarily unavailable.');
+      renderEmpty(container, 'Deals are loading slowly', 'Please refresh the page or try again later.');
       setStatus('deals-status', 'Could not load deals right now.');
     } finally {
       state.loading = false;
@@ -1066,7 +1066,7 @@ async function initPromotionsBrowser() {
       state.params = readFormParams(form);
       updateBrowserUrl(state.params);
     }
-    setStatus('promotions-status', state.page === 1 ? 'Loading live promo codes…' : 'Loading more promotions…');
+    setStatus('promotions-status', state.page === 1 ? 'Loading promo codes…' : 'Loading more promotions…');
     setLoadMore('promotions-load-more', false);
     try {
       const data = await fetchJson('/promotions', { ...state.params, page: state.page, page_size: FULL_PAGE_SIZE });
@@ -1198,7 +1198,7 @@ async function initStoresBrowser() {
     fullBrowserState.stores.all = Array.from(storeMap.values()).sort((a, b) => (b.deals + b.promos) - (a.deals + a.promos));
     const q = readFormParams(form).q || '';
     renderStoreDirectory(fullBrowserState.stores.all, q);
-    setStatus('stores-status', `${fullBrowserState.stores.all.length} stores loaded from the live API`);
+    setStatus('stores-status', `${fullBrowserState.stores.all.length} stores available`);
   } catch (_) {
     renderEmpty(container, 'Stores are loading slowly', 'Please refresh the page or browse all deals instead.');
     setStatus('stores-status', 'Could not load stores right now.');

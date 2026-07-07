@@ -1,1 +1,2 @@
-Enlarge the hero artwork substantially (roughly close to 2x visual impact) while keeping mobile unchanged.
+DiscountHub website — web product version.
+Run locally with: py -3 -m http.server 5173
