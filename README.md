@@ -1,1 +1,1 @@
-Clean premium hero patch: remove extra labels, properly center the provided artwork, stronger rounded glass frame, soft glow, subtle animation.
+Enlarge the hero artwork substantially (roughly close to 2x visual impact) while keeping mobile unchanged.
