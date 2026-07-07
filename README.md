@@ -35,3 +35,10 @@ Current direction:
 - `/partner-offers/` is a live partner-offer browser and submission entry point.
 - `/stores/` is a live store directory built from API facets.
 - The iOS app remains promoted, while Android is described as in review rather than used as the main CTA.
+
+
+Design v2 update:
+- Web-first hero with dashboard-style preview instead of app-only phone artwork.
+- Product-first navigation and CTAs.
+- Clickable store chips on the homepage.
+- Lightweight logo images for page rendering.
