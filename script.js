@@ -97,9 +97,8 @@ document.querySelectorAll('.magnetic').forEach((el) => {
   });
 });
 
-// v13: live app-preview sections powered by the public DiscountHub API.
-// The website intentionally shows only a small preview. The full browsing
-// experience should remain inside the mobile app.
+// v13: live homepage sections powered by the public DiscountHub API.
+// The homepage stays curated, while full browsing lives on the web pages.
 const DISCOUNTHUB_API_BASE_URL = 'https://api.discounthub.uz';
 const APP_DOWNLOAD_ANCHOR = '#download';
 
@@ -236,8 +235,8 @@ function showPreviewError(container, label) {
   container.innerHTML = `
     <div class="preview-empty">
       <strong>${escapeHtml(label)} is loading slowly.</strong>
-      <span>Download the app to browse the full DiscountHub feed.</span>
-      <a href="${APP_DOWNLOAD_ANCHOR}">Get the app</a>
+      <span>Open the web pages to browse the full DiscountHub feed.</span>
+      <a href="/deals/">Browse web</a>
     </div>
   `;
 }
@@ -286,8 +285,8 @@ function renderDealCards(items) {
             ${oldPrice ? `<span>${oldPrice}</span>` : ''}
           </div>
           <div class="offer-actions">
-            <a href="${target}" target="_blank" rel="noopener noreferrer">Preview deal</a>
-            <a class="ghost" href="${APP_DOWNLOAD_ANCHOR}">More in app</a>
+            <a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a>
+            <a class="ghost" href="/deals/">Browse more</a>
           </div>
         </div>
       </article>
@@ -376,7 +375,7 @@ function renderStoreCloud(facets) {
 
   if (!stores.length) return;
   container.innerHTML = stores.map((store) => `
-    <a href="#download" title="${escapeHtml(store.count)} live offers in the app">
+    <a href="/deals/?platform=${encodeURIComponent(store.name)}" title="${escapeHtml(store.count)} live offers on DiscountHub">
       ${escapeHtml(store.name)} <small>${escapeHtml(store.count)}</small>
     </a>
   `).join('');
@@ -814,4 +813,418 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadLivePreview);
 } else {
   loadLivePreview();
+}
+
+
+// v20260707: full web product pages powered by the public API.
+const FULL_PAGE_SIZE = 24;
+const fullBrowserState = {
+  deals: { page: 1, hasNext: false, loading: false, params: {} },
+  promotions: { page: 1, hasNext: false, loading: false, params: {} },
+  partner: { page: 1, hasNext: false, loading: false, params: {} },
+  stores: { all: [] },
+};
+
+function getQueryParams() {
+  return new URLSearchParams(window.location.search || '');
+}
+
+function setFormFromUrl(form) {
+  if (!form) return;
+  const params = getQueryParams();
+  Array.from(form.elements).forEach((el) => {
+    if (!el.name || !params.has(el.name)) return;
+    el.value = params.get(el.name) || '';
+  });
+}
+
+function readFormParams(form) {
+  const params = {};
+  if (!form) return params;
+  const data = new FormData(form);
+  data.forEach((value, key) => {
+    const clean = String(value || '').trim();
+    if (clean) params[key] = clean;
+  });
+  return params;
+}
+
+function updateBrowserUrl(pathParams) {
+  const params = new URLSearchParams();
+  Object.entries(pathParams || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') params.set(key, value);
+  });
+  const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+  window.history.replaceState({}, '', next);
+}
+
+function optionMarkup(name, count) {
+  const label = count ? `${name} (${count})` : name;
+  return `<option value="${escapeHtml(name)}">${escapeHtml(label)}</option>`;
+}
+
+function populateFacetSelect(select, items) {
+  if (!select || !Array.isArray(items)) return;
+  const first = select.querySelector('option')?.outerHTML || '<option value="">All</option>';
+  const values = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    const name = String(getField(item, 'name', 'name', '')).trim();
+    const key = normalizeKey(name);
+    const count = Number(getField(item, 'count', 'count', 0));
+    if (!name || !key || seen.has(key) || count <= 0) return;
+    seen.add(key);
+    values.push({ name, count });
+  });
+  select.innerHTML = first + values.map((item) => optionMarkup(item.name, item.count)).join('');
+}
+
+function setStatus(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function setLoadMore(id, visible, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = !visible;
+  if (label) el.textContent = label;
+}
+
+function renderEmpty(container, title, text) {
+  if (!container) return;
+  container.innerHTML = `<div class="empty-state"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span></div>`;
+}
+
+function discountLabel(discount) {
+  const value = Number(discount);
+  return Number.isFinite(value) && value > 0 ? `-${value}%` : 'Deal';
+}
+
+function dealCardMarkup(deal) {
+  const id = getField(deal, 'id', 'id');
+  const title = normalizeText(getField(deal, 'title', 'title'), 96);
+  const description = normalizeText(getField(deal, 'description', 'description'), 120);
+  const platform = normalizeText(getField(deal, 'platform', 'platform'), 34);
+  const category = normalizeText(getField(deal, 'category', 'category'), 34);
+  const imageUrl = getField(deal, 'imageUrl', 'image_url');
+  const discount = Number(getField(deal, 'discountPercent', 'discount_percent', 0));
+  const currency = getField(deal, 'currency', 'currency', 'USD');
+  const currentPrice = formatMoney(getField(deal, 'currentPrice', 'current_price'), currency);
+  const oldPrice = formatMoney(getField(deal, 'oldPrice', 'old_price'), currency);
+  const target = clickUrl('deal', id);
+
+  return `<article class="web-deal-card reveal visible">
+    <div class="web-deal-image">
+      ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove();" />` : ''}
+      <span class="image-fallback">%</span>
+      <b class="discount-badge">${escapeHtml(discountLabel(discount))}</b>
+    </div>
+    <div class="web-deal-body">
+      <div class="web-source"><span>${escapeHtml(platform || 'Online store')}</span>${category ? `<span>· ${escapeHtml(category)}</span>` : ''}</div>
+      <h3>${escapeHtml(title || 'DiscountHub deal')}</h3>
+      ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+      <div class="web-price-row">${currentPrice ? `<strong>${currentPrice}</strong>` : '<strong>Fresh offer</strong>'}${oldPrice ? `<span>${oldPrice}</span>` : ''}</div>
+      <div class="web-actions"><a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a></div>
+    </div>
+  </article>`;
+}
+
+function promoCardMarkup(promo) {
+  const id = getField(promo, 'id', 'id');
+  const title = normalizeText(getField(promo, 'title', 'title'), 100);
+  const description = normalizeText(getField(promo, 'description', 'description'), 150);
+  const store = normalizeText(getField(promo, 'store', 'store'), 44);
+  const discountText = normalizeText(getField(promo, 'discountText', 'discount_text'), 90);
+  const code = getField(promo, 'code', 'code');
+  const type = getField(promo, 'type', 'type', 'sale');
+  const target = clickUrl('promotion', id);
+
+  return `<article class="web-promo-card reveal visible">
+    <div class="web-meta"><span>${escapeHtml(store || 'Store')}</span><span class="type-pill">${escapeHtml(String(type).replace('_', ' '))}</span></div>
+    <h3>${escapeHtml(title || discountText || 'Store promotion')}</h3>
+    <p>${escapeHtml(description || discountText || 'Open the store offer to view details.')}</p>
+    <div class="web-actions">
+      ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
+      <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
+    </div>
+  </article>`;
+}
+
+function partnerCardMarkup(offer) {
+  const id = getField(offer, 'id', 'id');
+  const title = normalizeText(getField(offer, 'title', 'title'), 100);
+  const partnerName = normalizeText(getField(offer, 'partnerName', 'partner_name'), 44);
+  const category = normalizeText(getField(offer, 'category', 'category'), 32);
+  const subtitle = normalizeText(getField(offer, 'subtitle', 'subtitle'), 120);
+  const offerText = normalizeText(getField(offer, 'offerText', 'offer_text'), 110);
+  const currentPrice = normalizeText(getField(offer, 'currentPriceText', 'current_price_text'), 44);
+  const originalPrice = normalizeText(getField(offer, 'originalPriceText', 'original_price_text'), 44);
+  const code = getField(offer, 'code', 'code');
+  const verified = Boolean(getField(offer, 'verified', 'verified', false));
+  const target = clickUrl('partner', id);
+
+  return `<article class="web-partner-card reveal visible">
+    <div class="web-meta"><span>${escapeHtml(partnerName || 'Partner')}</span>${category ? `<span class="type-pill">${escapeHtml(category)}</span>` : ''}${verified ? '<span class="type-pill">Verified</span>' : ''}</div>
+    <h3>${escapeHtml(title || 'Partner offer')}</h3>
+    <p>${escapeHtml(subtitle || offerText || 'Open the partner offer to view details.')}</p>
+    ${currentPrice || originalPrice ? `<div class="web-price-row">${currentPrice ? `<strong>${escapeHtml(currentPrice)}</strong>` : ''}${originalPrice ? `<span>${escapeHtml(originalPrice)}</span>` : ''}</div>` : ''}
+    <div class="web-actions">
+      ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
+      <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
+    </div>
+  </article>`;
+}
+
+async function copyCodeValue(value, button) {
+  try {
+    await navigator.clipboard.writeText(String(value || ''));
+    if (button) {
+      const old = button.textContent;
+      button.textContent = 'Copied';
+      button.classList.add('copied-feedback');
+      setTimeout(() => { button.textContent = old; button.classList.remove('copied-feedback'); }, 1400);
+    }
+  } catch (_) {
+    if (button) button.textContent = 'Copy manually';
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-copy-code]');
+  if (!button) return;
+  copyCodeValue(button.getAttribute('data-copy-code'), button);
+});
+
+async function initDealsBrowser() {
+  const container = document.getElementById('deals-browser');
+  const form = document.getElementById('deals-controls');
+  if (!container || !form) return;
+  const state = fullBrowserState.deals;
+
+  setFormFromUrl(form);
+  try {
+    const facets = await fetchJson('/deals/facets', { currency: 'USD' });
+    populateFacetSelect(document.getElementById('deal-platform-filter'), facets.marketplaces);
+    populateFacetSelect(document.getElementById('deal-category-filter'), facets.categories);
+    setFormFromUrl(form);
+  } catch (_) {}
+
+  async function load(reset = false) {
+    if (state.loading) return;
+    state.loading = true;
+    if (reset) {
+      state.page = 1;
+      container.innerHTML = '';
+      state.params = readFormParams(form);
+      updateBrowserUrl(state.params);
+    }
+    setStatus('deals-status', state.page === 1 ? 'Loading live deals…' : 'Loading more deals…');
+    setLoadMore('deals-load-more', false);
+    try {
+      const data = await fetchJson('/deals', { ...state.params, currency: 'USD', page: state.page, page_size: FULL_PAGE_SIZE });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      state.hasNext = Boolean(data?.hasNextPage ?? data?.has_next_page);
+      if (state.page === 1 && !items.length) renderEmpty(container, 'No deals found', 'Try a different search, store or discount filter.');
+      else container.insertAdjacentHTML('beforeend', items.map(dealCardMarkup).join(''));
+      const total = Number(data?.total || 0);
+      setStatus('deals-status', total ? `Showing ${Math.min(state.page * FULL_PAGE_SIZE, total)} of ${total} live deals` : `${items.length} live deals loaded`);
+      setLoadMore('deals-load-more', state.hasNext, 'Load more deals');
+      if (state.hasNext) state.page += 1;
+    } catch (_) {
+      renderEmpty(container, 'Deals are loading slowly', 'Please refresh the page or open the iOS app if the API is temporarily unavailable.');
+      setStatus('deals-status', 'Could not load deals right now.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
+  document.getElementById('deals-clear')?.addEventListener('click', () => { form.reset(); load(true); });
+  document.getElementById('deals-load-more')?.addEventListener('click', () => load(false));
+  load(true);
+}
+
+async function initPromotionsBrowser() {
+  const container = document.getElementById('promotions-browser');
+  const form = document.getElementById('promotions-controls');
+  if (!container || !form) return;
+  const state = fullBrowserState.promotions;
+  setFormFromUrl(form);
+  try {
+    const stores = await fetchJson('/promotions/stores');
+    populateFacetSelect(document.getElementById('promotion-store-filter'), stores.items);
+    setFormFromUrl(form);
+  } catch (_) {}
+
+  async function load(reset = false) {
+    if (state.loading) return;
+    state.loading = true;
+    if (reset) {
+      state.page = 1;
+      container.innerHTML = '';
+      state.params = readFormParams(form);
+      updateBrowserUrl(state.params);
+    }
+    setStatus('promotions-status', state.page === 1 ? 'Loading live promo codes…' : 'Loading more promotions…');
+    setLoadMore('promotions-load-more', false);
+    try {
+      const data = await fetchJson('/promotions', { ...state.params, page: state.page, page_size: FULL_PAGE_SIZE });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      state.hasNext = Boolean(data?.hasNextPage ?? data?.has_next_page);
+      if (state.page === 1 && !items.length) renderEmpty(container, 'No promotions found', 'Try another search, store or promotion type.');
+      else container.insertAdjacentHTML('beforeend', items.map(promoCardMarkup).join(''));
+      const total = Number(data?.total || 0);
+      setStatus('promotions-status', total ? `Showing ${Math.min(state.page * FULL_PAGE_SIZE, total)} of ${total} promotions` : `${items.length} promotions loaded`);
+      setLoadMore('promotions-load-more', state.hasNext, 'Load more promotions');
+      if (state.hasNext) state.page += 1;
+    } catch (_) {
+      renderEmpty(container, 'Promotions are loading slowly', 'Please refresh the page or try again later.');
+      setStatus('promotions-status', 'Could not load promotions right now.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
+  document.getElementById('promotions-clear')?.addEventListener('click', () => { form.reset(); load(true); });
+  document.getElementById('promotions-load-more')?.addEventListener('click', () => load(false));
+  load(true);
+}
+
+async function initPartnerBrowser() {
+  const container = document.getElementById('partner-browser');
+  const form = document.getElementById('partner-controls');
+  if (!container || !form) return;
+  const state = fullBrowserState.partner;
+  setFormFromUrl(form);
+  try {
+    const categories = await fetchJson('/partner-offers/categories');
+    populateFacetSelect(document.getElementById('partner-category-filter'), categories.items);
+    setFormFromUrl(form);
+  } catch (_) {}
+
+  async function load(reset = false) {
+    if (state.loading) return;
+    state.loading = true;
+    if (reset) {
+      state.page = 1;
+      container.innerHTML = '';
+      state.params = readFormParams(form);
+      updateBrowserUrl(state.params);
+    }
+    setStatus('partner-status', state.page === 1 ? 'Loading partner offers…' : 'Loading more partner offers…');
+    setLoadMore('partner-load-more', false);
+    try {
+      const data = await fetchJson('/partner-offers', { ...state.params, page: state.page, page_size: FULL_PAGE_SIZE });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      state.hasNext = Boolean(data?.hasNextPage ?? data?.has_next_page);
+      if (state.page === 1 && !items.length) renderEmpty(container, 'No partner offers yet', 'Submit early founder and store discounts through the contact page.');
+      else container.insertAdjacentHTML('beforeend', items.map(partnerCardMarkup).join(''));
+      const total = Number(data?.total || 0);
+      setStatus('partner-status', total ? `Showing ${Math.min(state.page * FULL_PAGE_SIZE, total)} of ${total} partner offers` : `${items.length} partner offers loaded`);
+      setLoadMore('partner-load-more', state.hasNext, 'Load more partner offers');
+      if (state.hasNext) state.page += 1;
+    } catch (_) {
+      renderEmpty(container, 'Partner offers are loading slowly', 'Please refresh the page or submit an offer through the contact page.');
+      setStatus('partner-status', 'Could not load partner offers right now.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
+  document.getElementById('partner-clear')?.addEventListener('click', () => { form.reset(); load(true); });
+  document.getElementById('partner-load-more')?.addEventListener('click', () => load(false));
+  load(true);
+}
+
+function storeSlug(name) {
+  return normalizeKey(name).replace(/\s+/g, '-');
+}
+
+function renderStoreDirectory(items, q = '') {
+  const container = document.getElementById('stores-browser');
+  if (!container) return;
+  const query = normalizeKey(q);
+  const filtered = (Array.isArray(items) ? items : []).filter((item) => !query || normalizeKey(item.name).includes(query));
+  if (!filtered.length) {
+    renderEmpty(container, 'No stores found', 'Try another store name.');
+    return;
+  }
+  container.innerHTML = filtered.map((item) => {
+    const name = item.name;
+    const dealUrl = `/deals/?platform=${encodeURIComponent(name)}`;
+    const promoUrl = `/promo-codes/?store=${encodeURIComponent(name)}`;
+    return `<article class="store-directory-card reveal visible">
+      <div class="web-meta"><span>Store</span><span class="type-pill">${escapeHtml(storeSlug(name))}</span></div>
+      <h3>${escapeHtml(name)}</h3>
+      <p>Open live product deals or store promotions from DiscountHub.</p>
+      <div class="store-counts">
+        <span class="count-pill">${Number(item.deals || 0)} deals</span>
+        <span class="count-pill">${Number(item.promos || 0)} promos</span>
+      </div>
+      <div class="web-actions"><a href="${dealUrl}">Deals</a><a class="ghost-link" href="${promoUrl}">Promo codes</a></div>
+    </article>`;
+  }).join('');
+}
+
+async function initStoresBrowser() {
+  const container = document.getElementById('stores-browser');
+  const form = document.getElementById('stores-controls');
+  if (!container || !form) return;
+  setFormFromUrl(form);
+  setStatus('stores-status', 'Loading stores…');
+  try {
+    const [dealFacets, promoStores] = await Promise.allSettled([
+      fetchJson('/deals/facets', { currency: 'USD' }),
+      fetchJson('/promotions/stores'),
+    ]);
+    const storeMap = new Map();
+    function add(name, key, count) {
+      const clean = String(name || '').trim();
+      const mapKey = normalizeKey(clean);
+      if (!clean || !mapKey) return;
+      const item = storeMap.get(mapKey) || { name: clean, deals: 0, promos: 0 };
+      item[key] += Number(count || 0);
+      storeMap.set(mapKey, item);
+    }
+    if (dealFacets.status === 'fulfilled') {
+      (dealFacets.value.marketplaces || []).forEach((item) => add(getField(item, 'name', 'name'), 'deals', getField(item, 'count', 'count', 0)));
+    }
+    if (promoStores.status === 'fulfilled') {
+      (promoStores.value.items || []).forEach((item) => add(getField(item, 'name', 'name'), 'promos', getField(item, 'count', 'count', 0)));
+    }
+    fullBrowserState.stores.all = Array.from(storeMap.values()).sort((a, b) => (b.deals + b.promos) - (a.deals + a.promos));
+    const q = readFormParams(form).q || '';
+    renderStoreDirectory(fullBrowserState.stores.all, q);
+    setStatus('stores-status', `${fullBrowserState.stores.all.length} stores loaded from the live API`);
+  } catch (_) {
+    renderEmpty(container, 'Stores are loading slowly', 'Please refresh the page or browse all deals instead.');
+    setStatus('stores-status', 'Could not load stores right now.');
+  }
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const q = readFormParams(form).q || '';
+    updateBrowserUrl(q ? { q } : {});
+    renderStoreDirectory(fullBrowserState.stores.all, q);
+  });
+  document.getElementById('stores-clear')?.addEventListener('click', () => {
+    form.reset();
+    updateBrowserUrl({});
+    renderStoreDirectory(fullBrowserState.stores.all, '');
+  });
+}
+
+function initFullWebPages() {
+  initDealsBrowser();
+  initPromotionsBrowser();
+  initPartnerBrowser();
+  initStoresBrowser();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFullWebPages);
+} else {
+  initFullWebPages();
 }
