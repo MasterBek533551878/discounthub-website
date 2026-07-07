@@ -1,2 +1,1 @@
-DiscountHub website — web product version.
-Run locally with: py -3 -m http.server 5173
+Pages UI v3: premium styling for deals, promo codes, partner offers and stores pages.
