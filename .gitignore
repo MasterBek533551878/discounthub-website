@@ -1,0 +1,22 @@
+﻿# Local / generated files
+.wrangler/
+node_modules/
+.next/
+dist/
+build/
+.cache/
+.DS_Store
+Thumbs.db
+
+# DiscountHub website local patch/backup files
+backup_*/
+.backup_*/
+*_backup_*/
+discounthub-website-trash-cleanup-*/
+PATCH_MANIFEST.txt
+README_*_PATCH.txt
+README_SEO_*.txt
+script.backup_*
+styles.css.backup_*
+*.before_*.bak
+*.bak
