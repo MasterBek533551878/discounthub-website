@@ -1,0 +1,66 @@
+/* Product Hunt launch badge — 2026-07-09 */
+.ph-launch-proof{
+  width:min(100%, 720px);
+  margin-top:22px;
+  padding:16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255,97,85,.18), transparent 30%),
+    linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.048));
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:0 20px 70px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(18px);
+}
+.ph-launch-copy{
+  min-width:0;
+}
+.ph-launch-copy strong{
+  display:block;
+  color:#fff;
+  font-size:16px;
+  line-height:1.2;
+  letter-spacing:.005em;
+}
+.ph-launch-copy span{
+  display:block;
+  margin-top:5px;
+  color:#b9c7e4;
+  font-size:14px;
+  line-height:1.45;
+  font-weight:650;
+}
+.ph-badge-wrap{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:54px;
+  border-radius:15px;
+  transition:transform .22s ease, filter .22s ease;
+}
+.ph-badge-wrap:hover{
+  transform:translateY(-3px);
+  filter:drop-shadow(0 16px 34px rgba(255,97,85,.18));
+}
+.ph-badge-wrap img{
+  width:250px;
+  height:54px;
+  max-width:100%;
+}
+@media (max-width:720px){
+  .ph-launch-proof{
+    align-items:flex-start;
+    flex-direction:column;
+    padding:15px;
+    border-radius:22px;
+  }
+  .ph-badge-wrap,
+  .ph-badge-wrap img{
+    width:250px;
+    max-width:100%;
+  }
+}
