@@ -962,16 +962,26 @@ function partnerCardMarkup(offer) {
   const originalPrice = normalizeText(getField(offer, 'originalPriceText', 'original_price_text'), 44);
   const code = getField(offer, 'code', 'code');
   const verified = Boolean(getField(offer, 'verified', 'verified', false));
+  const imageUrl = String(getField(offer, 'imageUrl', 'image_url', '') || '').trim();
   const target = clickUrl('partner', id);
 
-  return `<article class="web-partner-card reveal visible">
-    <div class="web-meta"><span>${escapeHtml(partnerName || 'Partner')}</span>${category ? `<span class="type-pill">${escapeHtml(category)}</span>` : ''}${verified ? '<span class="type-pill">Verified</span>' : ''}</div>
-    <h3>${escapeHtml(title || 'Partner offer')}</h3>
-    <p>${escapeHtml(subtitle || offerText || 'Open the partner offer to view details.')}</p>
-    ${currentPrice || originalPrice ? `<div class="web-price-row">${currentPrice ? `<strong>${escapeHtml(currentPrice)}</strong>` : ''}${originalPrice ? `<span>${escapeHtml(originalPrice)}</span>` : ''}</div>` : ''}
-    <div class="web-actions">
-      ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
-      <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
+  const imageMarkup = imageUrl ? `
+    <div class="web-partner-image">
+      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title || partnerName || 'Partner offer')} banner" loading="lazy" />
+    </div>
+  ` : '';
+
+  return `<article class="web-partner-card ${imageUrl ? 'has-partner-image' : ''} reveal visible">
+    ${imageMarkup}
+    <div class="web-partner-content">
+      <div class="web-meta"><span>${escapeHtml(partnerName || 'Partner')}</span>${category ? `<span class="type-pill">${escapeHtml(category)}</span>` : ''}${verified ? '<span class="type-pill">Verified</span>' : ''}</div>
+      <h3>${escapeHtml(title || 'Partner offer')}</h3>
+      <p>${escapeHtml(subtitle || offerText || 'Open the partner offer to view details.')}</p>
+      ${currentPrice || originalPrice ? `<div class="web-price-row">${currentPrice ? `<strong>${escapeHtml(currentPrice)}</strong>` : ''}${originalPrice ? `<span>${escapeHtml(originalPrice)}</span>` : ''}</div>` : ''}
+      <div class="web-actions">
+        ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
+        <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
+      </div>
     </div>
   </article>`;
 }
