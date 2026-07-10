@@ -954,6 +954,22 @@ function promoCardMarkup(promo) {
   </article>`;
 }
 
+function formatPartnerDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date);
+  } catch (_) {
+    return String(value).slice(0, 10);
+  }
+}
+
 function partnerCardMarkup(offer) {
   const id = getField(offer, 'id', 'id');
   const title = normalizeText(getField(offer, 'title', 'title'), 100);
@@ -966,6 +982,7 @@ function partnerCardMarkup(offer) {
   const code = getField(offer, 'code', 'code');
   const verified = Boolean(getField(offer, 'verified', 'verified', false));
   const imageUrl = String(getField(offer, 'imageUrl', 'image_url', '') || '').trim();
+  const validUntil = formatPartnerDate(getField(offer, 'validUntil', 'valid_until', ''));
   const target = clickUrl('partner', id);
 
   const imageMarkup = imageUrl ? `
@@ -981,6 +998,7 @@ function partnerCardMarkup(offer) {
       <h3>${escapeHtml(title || 'Partner offer')}</h3>
       <p>${escapeHtml(subtitle || offerText || 'Open the partner offer to view details.')}</p>
       ${currentPrice || originalPrice ? `<div class="web-price-row">${currentPrice ? `<strong>${escapeHtml(currentPrice)}</strong>` : ''}${originalPrice ? `<span>${escapeHtml(originalPrice)}</span>` : ''}</div>` : ''}
+      ${validUntil ? `<div class="partner-validity">Valid until ${escapeHtml(validUntil)}</div>` : ''}
       <div class="web-actions">
         ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
         <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>

@@ -1529,3 +1529,19 @@ body{letter-spacing:0;}
     height:190px !important;
   }
 }
+
+
+/* v20260710: partner offer validity date */
+.partner-validity{
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
+  margin:0 0 14px;
+  padding:0 11px;
+  border-radius:999px;
+  color:#d8e4ff;
+  background:rgba(255,255,255,.075);
+  border:1px solid rgba(255,255,255,.13);
+  font-size:13px;
+  font-weight:850;
+}
