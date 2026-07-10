@@ -887,7 +887,10 @@ function setStatus(id, text) {
 function setLoadMore(id, visible, label) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.hidden = !visible;
+  const shouldShow = Boolean(visible);
+  el.hidden = !shouldShow;
+  el.disabled = !shouldShow;
+  el.style.display = shouldShow ? 'flex' : 'none';
   if (label) el.textContent = label;
 }
 
@@ -1051,7 +1054,7 @@ async function initDealsBrowser() {
 
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
   document.getElementById('deals-clear')?.addEventListener('click', () => { form.reset(); load(true); });
-  document.getElementById('deals-load-more')?.addEventListener('click', () => load(false));
+  document.getElementById('deals-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
   load(true);
 }
 
@@ -1098,7 +1101,7 @@ async function initPromotionsBrowser() {
 
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
   document.getElementById('promotions-clear')?.addEventListener('click', () => { form.reset(); load(true); });
-  document.getElementById('promotions-load-more')?.addEventListener('click', () => load(false));
+  document.getElementById('promotions-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
   load(true);
 }
 
@@ -1145,7 +1148,7 @@ async function initPartnerBrowser() {
 
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
   document.getElementById('partner-clear')?.addEventListener('click', () => { form.reset(); load(true); });
-  document.getElementById('partner-load-more')?.addEventListener('click', () => load(false));
+  document.getElementById('partner-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
   load(true);
 }
 

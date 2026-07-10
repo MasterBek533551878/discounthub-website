@@ -1483,3 +1483,23 @@ body{letter-spacing:0;}
     height:190px;
   }
 }
+
+
+/* v20260710: load more button visibility and alignment fix */
+.load-more{
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  line-height:1.05;
+  min-width:260px;
+  padding:0 22px;
+}
+
+.load-more[hidden]{
+  display:none !important;
+}
+
+.load-more:disabled{
+  cursor:default;
+  opacity:.7;
+}
