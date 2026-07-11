@@ -286,7 +286,6 @@ function socialActionsMarkup(title, relativeUrl) {
   const links = buildSocialShareLinks(title, relativeUrl);
   return `
     <div class="share-inline-group">
-      <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(relativeUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub offer')}">Share</button>
       <a class="share-icon-btn" href="${links.x}" target="_blank" rel="noopener noreferrer" aria-label="Share on X" title="Share on X">${socialIcon('x')}</a>
       <a class="share-icon-btn" href="${links.telegram}" target="_blank" rel="noopener noreferrer" aria-label="Share on Telegram" title="Share on Telegram">${socialIcon('telegram')}</a>
       <button class="share-icon-btn copy-link-btn" type="button" data-copy-url="${escapeHtml(relativeUrl)}" aria-label="Copy link" title="Copy link">${socialIcon('copy')}</button>
