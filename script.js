@@ -249,6 +249,57 @@ function clickUrl(type, id) {
   return `${DISCOUNTHUB_API_BASE_URL}/deals/${safeId}/click`;
 }
 
+function shareDiscountHubUrl(type, title, source) {
+  const path = type === 'promotion' ? '/promo-codes/' : '/deals/';
+  const params = new URLSearchParams();
+  const cleanTitle = String(title || '').trim();
+  const cleanSource = String(source || '').trim();
+  if (cleanTitle) params.set('q', cleanTitle);
+  if (cleanSource) params.set(type === 'promotion' ? 'store' : 'platform', cleanSource);
+  const query = params.toString();
+  return `${path}${query ? `?${query}` : ''}`;
+}
+
+async function shareDiscountHubItem(button) {
+  const relativeUrl = String(button?.dataset?.shareUrl || '').trim();
+  if (!relativeUrl) return;
+
+  const title = String(button.dataset.shareTitle || 'DiscountHub offer').trim();
+  const url = new URL(relativeUrl, window.location.origin).href;
+  const originalText = button.textContent;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text: title, url });
+      return;
+    }
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const input = document.createElement('textarea');
+      input.value = url;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+    }
+    button.textContent = 'Link copied';
+    button.classList.add('copied');
+    window.setTimeout(() => {
+      button.textContent = originalText;
+      button.classList.remove('copied');
+    }, 1800);
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      button.textContent = 'Copy failed';
+      window.setTimeout(() => { button.textContent = originalText; }, 1800);
+    }
+  }
+}
+
 function renderDealCards(items) {
   const container = document.getElementById('latest-deals');
   if (!container) return;
@@ -269,6 +320,7 @@ function renderDealCards(items) {
     const currentPrice = formatMoney(getField(deal, 'currentPrice', 'current_price'), currency);
     const oldPrice = formatMoney(getField(deal, 'oldPrice', 'old_price'), currency);
     const target = clickUrl('deal', id);
+    const shareUrl = shareDiscountHubUrl('deal', title, platform);
 
     return `
       <article class="offer-card">
@@ -286,6 +338,7 @@ function renderDealCards(items) {
           </div>
           <div class="offer-actions">
             <a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a>
+            <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub deal')}">Share</button>
             <a class="ghost" href="/deals/">Browse more</a>
           </div>
         </div>
@@ -311,6 +364,7 @@ function renderPromotionCards(items) {
     const code = getField(promo, 'code', 'code');
     const type = getField(promo, 'type', 'type', 'sale');
     const target = clickUrl('promotion', id);
+    const shareUrl = shareDiscountHubUrl('promotion', title || discountText, store);
 
     return `
       <article class="compact-offer">
@@ -320,7 +374,10 @@ function renderPromotionCards(items) {
           <h4>${escapeHtml(title || discountText || 'Special promotion')}</h4>
           <p>${code ? `Code: <b>${escapeHtml(code)}</b>` : escapeHtml(discountText || 'Limited-time offer')}</p>
         </div>
-        <a href="${target}" target="_blank" rel="noopener noreferrer" aria-label="Preview ${escapeHtml(title || 'promotion')}">Open</a>
+        <div class="compact-actions">
+          <a href="${target}" target="_blank" rel="noopener noreferrer" aria-label="Preview ${escapeHtml(title || 'promotion')}">Open</a>
+          <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || discountText || 'DiscountHub promotion')}">Share</button>
+        </div>
       </article>
     `;
   }).join('');
@@ -916,6 +973,7 @@ function dealCardMarkup(deal) {
   const currentPrice = formatMoney(getField(deal, 'currentPrice', 'current_price'), currency);
   const oldPrice = formatMoney(getField(deal, 'oldPrice', 'old_price'), currency);
   const target = clickUrl('deal', id);
+  const shareUrl = shareDiscountHubUrl('deal', title, platform);
 
   return `<article class="web-deal-card reveal visible">
     <div class="web-deal-image">
@@ -928,7 +986,10 @@ function dealCardMarkup(deal) {
       <h3>${escapeHtml(title || 'DiscountHub deal')}</h3>
       ${description ? `<p>${escapeHtml(description)}</p>` : ''}
       <div class="web-price-row">${currentPrice ? `<strong>${currentPrice}</strong>` : '<strong>Fresh offer</strong>'}${oldPrice ? `<span>${oldPrice}</span>` : ''}</div>
-      <div class="web-actions"><a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a></div>
+      <div class="web-actions">
+        <a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a>
+        <button class="share-offer-btn ghost-link" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub deal')}">Share</button>
+      </div>
     </div>
   </article>`;
 }
@@ -942,6 +1003,7 @@ function promoCardMarkup(promo) {
   const code = getField(promo, 'code', 'code');
   const type = getField(promo, 'type', 'type', 'sale');
   const target = clickUrl('promotion', id);
+  const shareUrl = shareDiscountHubUrl('promotion', title || discountText, store);
 
   return `<article class="web-promo-card reveal visible">
     <div class="web-meta"><span>${escapeHtml(store || 'Store')}</span><span class="type-pill">${escapeHtml(String(type).replace('_', ' '))}</span></div>
@@ -950,6 +1012,7 @@ function promoCardMarkup(promo) {
     <div class="web-actions">
       ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
       <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
+      <button class="share-offer-btn ghost-link" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || discountText || 'DiscountHub promotion')}">Share</button>
     </div>
   </article>`;
 }
@@ -1246,6 +1309,12 @@ async function initStoresBrowser() {
     renderStoreDirectory(fullBrowserState.stores.all, '');
   });
 }
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-share-url]');
+  if (!button) return;
+  shareDiscountHubItem(button);
+});
 
 function initFullWebPages() {
   initDealsBrowser();

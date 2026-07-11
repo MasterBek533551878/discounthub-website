@@ -1545,3 +1545,63 @@ body{letter-spacing:0;}
   font-size:13px;
   font-weight:850;
 }
+
+/* Share buttons for deal and promotion cards */
+.share-offer-btn{
+  cursor:pointer;
+  border:1px solid rgba(255,255,255,.14);
+  color:#e9efff;
+  background:rgba(255,255,255,.08);
+  font:inherit;
+  font-weight:900;
+  transition:transform .2s ease,border-color .2s ease,background .2s ease,color .2s ease;
+}
+.share-offer-btn:hover{
+  transform:translateY(-2px);
+  color:#fff;
+  border-color:rgba(66,234,255,.36);
+  background:rgba(66,234,255,.11);
+}
+.share-offer-btn.copied{
+  color:#04122a;
+  border-color:transparent;
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+}
+.offer-actions .share-offer-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:9px 10px;
+  border-radius:14px;
+  font-size:13px;
+}
+.compact-actions{
+  display:grid;
+  gap:8px;
+  min-width:82px;
+}
+.compact-actions a,
+.compact-actions button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:8px 12px;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:900;
+}
+.compact-actions a{
+  color:#04122a;
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+}
+.web-actions .share-offer-btn{
+  min-height:46px;
+  padding:0 14px;
+  border-radius:16px;
+}
+@media (max-width:760px){
+  .compact-offer{grid-template-columns:auto minmax(0,1fr)}
+  .compact-actions{grid-column:1 / -1;grid-template-columns:1fr 1fr;width:100%}
+}
