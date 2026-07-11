@@ -258,19 +258,46 @@ function shareDiscountHubUrl(type, id) {
   return `${path}?${params.toString()}`;
 }
 
-async function shareDiscountHubItem(button) {
-  const relativeUrl = String(button?.dataset?.shareUrl || '').trim();
-  if (!relativeUrl) return;
+function absoluteDiscountHubUrl(relativeUrl) {
+  return new URL(String(relativeUrl || '').trim() || '/', window.location.origin).href;
+}
 
-  const title = String(button.dataset.shareTitle || 'DiscountHub offer').trim();
-  const url = new URL(relativeUrl, window.location.origin).href;
-  const originalText = button.textContent;
+function buildSocialShareLinks(title, relativeUrl) {
+  const cleanTitle = String(title || 'DiscountHub offer').trim();
+  const url = absoluteDiscountHubUrl(relativeUrl);
+  return {
+    url,
+    x: `https://x.com/intent/tweet?text=${encodeURIComponent(cleanTitle)}&url=${encodeURIComponent(url)}`,
+    telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(cleanTitle)}`,
+  };
+}
 
+function socialIcon(name) {
+  if (name === 'x') {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.901 2H22l-6.77 7.737L23.2 22h-6.24l-4.886-7.43L5.57 22H2.47l7.24-8.276L1.8 2h6.4l4.417 6.735L18.9 2Zm-1.095 18h1.717L7.267 3.895H5.424L17.806 20Z" fill="currentColor"/></svg>';
+  }
+  if (name === 'telegram') {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.944 4.663c.214-.965-.35-1.342-1.245-1.02L2.995 10.47c-.948.38-.934.909-.172 1.14l4.546 1.42 1.758 5.49c.224.624.113.873.77.873.507 0 .732-.23 1.014-.507l2.195-2.133 4.566 3.37c.841.464 1.445.226 1.655-.779l2.617-14.681ZM9.81 17.76l-1.02-3.365 8.616-5.438c.403-.245.772-.113.47.154l-7.107 6.417-.279 2.232c-.037.322-.146.399-.68 0Z" fill="currentColor"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 13.41a1.996 1.996 0 0 0 2.82 0l3.59-3.59a2 2 0 0 0-2.83-2.83l-1.29 1.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.41 10.59a1.996 1.996 0 0 0-2.82 0L7 14.17A2 2 0 1 0 9.83 17l1.29-1.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function socialActionsMarkup(title, relativeUrl) {
+  const links = buildSocialShareLinks(title, relativeUrl);
+  return `
+    <div class="share-inline-group">
+      <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(relativeUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub offer')}">Share</button>
+      <a class="share-icon-btn" href="${links.x}" target="_blank" rel="noopener noreferrer" aria-label="Share on X" title="Share on X">${socialIcon('x')}</a>
+      <a class="share-icon-btn" href="${links.telegram}" target="_blank" rel="noopener noreferrer" aria-label="Share on Telegram" title="Share on Telegram">${socialIcon('telegram')}</a>
+      <button class="share-icon-btn copy-link-btn" type="button" data-copy-url="${escapeHtml(relativeUrl)}" aria-label="Copy link" title="Copy link">${socialIcon('copy')}</button>
+    </div>
+  `;
+}
+
+async function copyAbsoluteUrl(relativeUrl, button) {
+  const url = absoluteDiscountHubUrl(relativeUrl);
+  const originalTitle = button?.getAttribute('title') || 'Copy link';
   try {
-    if (navigator.share) {
-      await navigator.share({ title, text: title, url });
-      return;
-    }
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url);
     } else {
@@ -284,11 +311,39 @@ async function shareDiscountHubItem(button) {
       document.execCommand('copy');
       input.remove();
     }
+    if (button) {
+      button.classList.add('copied');
+      button.setAttribute('title', 'Link copied');
+      window.setTimeout(() => {
+        button.classList.remove('copied');
+        button.setAttribute('title', originalTitle);
+      }, 1800);
+    }
+  } catch (_) {
+    if (button) {
+      button.setAttribute('title', 'Copy failed');
+      window.setTimeout(() => button.setAttribute('title', originalTitle), 1800);
+    }
+  }
+}
+
+async function shareDiscountHubItem(button) {
+  const relativeUrl = String(button?.dataset?.shareUrl || '').trim();
+  if (!relativeUrl) return;
+
+  const title = String(button.dataset.shareTitle || 'DiscountHub offer').trim();
+  const url = absoluteDiscountHubUrl(relativeUrl);
+  const originalText = button.textContent;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text: title, url });
+      return;
+    }
+    await copyAbsoluteUrl(relativeUrl, button);
     button.textContent = 'Link copied';
-    button.classList.add('copied');
     window.setTimeout(() => {
       button.textContent = originalText;
-      button.classList.remove('copied');
     }, 1800);
   } catch (error) {
     if (error?.name !== 'AbortError') {
@@ -336,7 +391,7 @@ function renderDealCards(items) {
           </div>
           <div class="offer-actions">
             <a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a>
-            <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub deal')}">Share</button>
+            ${socialActionsMarkup(title || 'DiscountHub deal', shareUrl)}
             <a class="ghost" href="/deals/">Browse more</a>
           </div>
         </div>
@@ -374,7 +429,7 @@ function renderPromotionCards(items) {
         </div>
         <div class="compact-actions">
           <a href="${target}" target="_blank" rel="noopener noreferrer" aria-label="Preview ${escapeHtml(title || 'promotion')}">Open</a>
-          <button class="share-offer-btn" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || discountText || 'DiscountHub promotion')}">Share</button>
+          ${socialActionsMarkup(title || discountText || 'DiscountHub promotion', shareUrl)}
         </div>
       </article>
     `;
@@ -986,7 +1041,7 @@ function dealCardMarkup(deal) {
       <div class="web-price-row">${currentPrice ? `<strong>${currentPrice}</strong>` : '<strong>Fresh offer</strong>'}${oldPrice ? `<span>${oldPrice}</span>` : ''}</div>
       <div class="web-actions">
         <a href="${target}" target="_blank" rel="noopener noreferrer">View deal</a>
-        <button class="share-offer-btn ghost-link" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || 'DiscountHub deal')}">Share</button>
+        ${socialActionsMarkup(title || 'DiscountHub deal', shareUrl)}
       </div>
     </div>
   </article>`;
@@ -1010,7 +1065,7 @@ function promoCardMarkup(promo) {
     <div class="web-actions">
       ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
       <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
-      <button class="share-offer-btn ghost-link" type="button" data-share-url="${escapeHtml(shareUrl)}" data-share-title="${escapeHtml(title || discountText || 'DiscountHub promotion')}">Share</button>
+      ${socialActionsMarkup(title || discountText || 'DiscountHub promotion', shareUrl)}
     </div>
   </article>`;
 }
@@ -1352,6 +1407,11 @@ async function initStoresBrowser() {
 }
 
 document.addEventListener('click', (event) => {
+  const copyButton = event.target.closest('[data-copy-url]');
+  if (copyButton) {
+    copyAbsoluteUrl(copyButton.getAttribute('data-copy-url'), copyButton);
+    return;
+  }
   const button = event.target.closest('[data-share-url]');
   if (!button) return;
   shareDiscountHubItem(button);

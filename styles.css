@@ -1605,3 +1605,18 @@ body{letter-spacing:0;}
   .compact-offer{grid-template-columns:auto minmax(0,1fr)}
   .compact-actions{grid-column:1 / -1;grid-template-columns:1fr 1fr;width:100%}
 }
+
+
+/* Social share buttons for deals and promo cards */
+.share-inline-group{display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px}
+.share-icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#e9efff;transition:transform .2s ease,border-color .2s ease,background .2s ease,color .2s ease}
+.share-icon-btn:hover{transform:translateY(-2px);color:#fff;border-color:rgba(66,234,255,.36);background:rgba(66,234,255,.11)}
+.share-icon-btn svg{width:18px;height:18px;display:block}
+.share-icon-btn.copied{color:#04122a;border-color:transparent;background:linear-gradient(135deg,var(--green),var(--cyan))}
+.offer-actions .share-inline-group{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.offer-actions .share-icon-btn{min-height:38px;min-width:38px;padding:8px 10px;border-radius:14px}
+.web-actions .share-inline-group{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.web-actions .share-icon-btn{min-height:46px;min-width:46px;border-radius:16px}
+.copy-link-btn{cursor:pointer}
+.compact-actions .share-inline-group{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.compact-actions .share-icon-btn{min-height:38px;min-width:38px;padding:8px 10px;border-radius:14px}.compact-actions .share-offer-btn{min-height:38px;padding:8px 12px;border-radius:14px}
+@media (max-width:760px){.offer-actions .share-inline-group,.web-actions .share-inline-group,.compact-actions .share-inline-group{width:100%}}
