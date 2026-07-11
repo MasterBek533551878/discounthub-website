@@ -249,15 +249,13 @@ function clickUrl(type, id) {
   return `${DISCOUNTHUB_API_BASE_URL}/deals/${safeId}/click`;
 }
 
-function shareDiscountHubUrl(type, title, source) {
+function shareDiscountHubUrl(type, id) {
   const path = type === 'promotion' ? '/promo-codes/' : '/deals/';
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return path;
   const params = new URLSearchParams();
-  const cleanTitle = String(title || '').trim();
-  const cleanSource = String(source || '').trim();
-  if (cleanTitle) params.set('q', cleanTitle);
-  if (cleanSource) params.set(type === 'promotion' ? 'store' : 'platform', cleanSource);
-  const query = params.toString();
-  return `${path}${query ? `?${query}` : ''}`;
+  params.set(type === 'promotion' ? 'promotion_id' : 'deal_id', cleanId);
+  return `${path}?${params.toString()}`;
 }
 
 async function shareDiscountHubItem(button) {
@@ -320,7 +318,7 @@ function renderDealCards(items) {
     const currentPrice = formatMoney(getField(deal, 'currentPrice', 'current_price'), currency);
     const oldPrice = formatMoney(getField(deal, 'oldPrice', 'old_price'), currency);
     const target = clickUrl('deal', id);
-    const shareUrl = shareDiscountHubUrl('deal', title, platform);
+    const shareUrl = shareDiscountHubUrl('deal', id);
 
     return `
       <article class="offer-card">
@@ -364,7 +362,7 @@ function renderPromotionCards(items) {
     const code = getField(promo, 'code', 'code');
     const type = getField(promo, 'type', 'type', 'sale');
     const target = clickUrl('promotion', id);
-    const shareUrl = shareDiscountHubUrl('promotion', title || discountText, store);
+    const shareUrl = shareDiscountHubUrl('promotion', id);
 
     return `
       <article class="compact-offer">
@@ -973,7 +971,7 @@ function dealCardMarkup(deal) {
   const currentPrice = formatMoney(getField(deal, 'currentPrice', 'current_price'), currency);
   const oldPrice = formatMoney(getField(deal, 'oldPrice', 'old_price'), currency);
   const target = clickUrl('deal', id);
-  const shareUrl = shareDiscountHubUrl('deal', title, platform);
+  const shareUrl = shareDiscountHubUrl('deal', id);
 
   return `<article class="web-deal-card reveal visible">
     <div class="web-deal-image">
@@ -1003,7 +1001,7 @@ function promoCardMarkup(promo) {
   const code = getField(promo, 'code', 'code');
   const type = getField(promo, 'type', 'type', 'sale');
   const target = clickUrl('promotion', id);
-  const shareUrl = shareDiscountHubUrl('promotion', title || discountText, store);
+  const shareUrl = shareDiscountHubUrl('promotion', id);
 
   return `<article class="web-promo-card reveal visible">
     <div class="web-meta"><span>${escapeHtml(store || 'Store')}</span><span class="type-pill">${escapeHtml(String(type).replace('_', ' '))}</span></div>
@@ -1095,6 +1093,7 @@ async function initDealsBrowser() {
   const form = document.getElementById('deals-controls');
   if (!container || !form) return;
   const state = fullBrowserState.deals;
+  const sharedDealId = String(getQueryParams().get('deal_id') || '').trim();
 
   setFormFromUrl(form);
   try {
@@ -1133,10 +1132,30 @@ async function initDealsBrowser() {
     }
   }
 
+  async function loadSharedDeal(id) {
+    if (state.loading) return;
+    state.loading = true;
+    container.innerHTML = '';
+    setStatus('deals-status', 'Loading shared deal…');
+    setLoadMore('deals-load-more', false);
+    try {
+      const deal = await fetchJson(`/deals/${encodeURIComponent(id)}`, { currency: 'USD' });
+      container.innerHTML = dealCardMarkup(deal);
+      setStatus('deals-status', 'Showing shared deal');
+    } catch (_) {
+      renderEmpty(container, 'Deal not found', 'This shared deal may have expired or been removed.');
+      setStatus('deals-status', 'Shared deal is unavailable.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
   document.getElementById('deals-clear')?.addEventListener('click', () => { form.reset(); load(true); });
   document.getElementById('deals-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
-  load(true);
+
+  if (sharedDealId) await loadSharedDeal(sharedDealId);
+  else load(true);
 }
 
 async function initPromotionsBrowser() {
@@ -1144,6 +1163,8 @@ async function initPromotionsBrowser() {
   const form = document.getElementById('promotions-controls');
   if (!container || !form) return;
   const state = fullBrowserState.promotions;
+  const sharedPromotionId = String(getQueryParams().get('promotion_id') || '').trim();
+
   setFormFromUrl(form);
   try {
     const stores = await fetchJson('/promotions/stores');
@@ -1180,10 +1201,30 @@ async function initPromotionsBrowser() {
     }
   }
 
+  async function loadSharedPromotion(id) {
+    if (state.loading) return;
+    state.loading = true;
+    container.innerHTML = '';
+    setStatus('promotions-status', 'Loading shared promotion…');
+    setLoadMore('promotions-load-more', false);
+    try {
+      const promotion = await fetchJson(`/promotions/${encodeURIComponent(id)}`);
+      container.innerHTML = promoCardMarkup(promotion);
+      setStatus('promotions-status', 'Showing shared promotion');
+    } catch (_) {
+      renderEmpty(container, 'Promotion not found', 'This shared promotion may have expired or been removed.');
+      setStatus('promotions-status', 'Shared promotion is unavailable.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
   document.getElementById('promotions-clear')?.addEventListener('click', () => { form.reset(); load(true); });
   document.getElementById('promotions-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
-  load(true);
+
+  if (sharedPromotionId) await loadSharedPromotion(sharedPromotionId);
+  else load(true);
 }
 
 async function initPartnerBrowser() {
