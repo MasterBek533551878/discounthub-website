@@ -129,6 +129,17 @@
     </div>
   </footer>
 
+  <script>
+    (() => {
+      const key = 'discounthub_ai_session_id';
+      let value = localStorage.getItem(key);
+      if (!value) {
+        value = window.crypto?.randomUUID?.() || `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem(key, value);
+      }
+      sessionStorage.setItem(key, value);
+    })();
+  </script>
   <script src="ai.js?v=20260713-ai-finder"></script>
 </body>
 </html>
