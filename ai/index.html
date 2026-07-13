@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Deal Finder — DiscountHub</title>
+  <meta name="description" content="Describe what you want and let DiscountHub search current deals, promo codes and partner offers. No account or registration required." />
+  <meta name="theme-color" content="#061333" />
+  <meta property="og:title" content="AI Deal Finder — DiscountHub" />
+  <meta property="og:description" content="Chat with DiscountHub and discover current discounts, promo codes and partner offers without creating an account." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://discounthub.uz/ai/" />
+  <meta property="og:image" content="https://discounthub.uz/assets/app-icon.png" />
+  <link rel="canonical" href="https://discounthub.uz/ai/" />
+  <link rel="icon" href="../favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="../assets/icon-180.png" />
+  <link rel="stylesheet" href="../styles.css?v=20260713-ai-finder" />
+  <link rel="stylesheet" href="ai.css?v=20260713-ai-finder" />
+</head>
+<body class="ai-page">
+  <div class="percent-layer" aria-hidden="true"></div>
+  <div class="orb orb-a" aria-hidden="true"></div>
+  <div class="orb orb-b" aria-hidden="true"></div>
+  <div class="orb orb-c" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="brand" href="/" aria-label="DiscountHub home">
+      <img src="../assets/icon-180.png" alt="DiscountHub logo" />
+      <span>Discount<span>Hub</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="/deals/">Deals</a>
+      <a href="/promo-codes/">Promo codes</a>
+      <a href="/partner-offers/">Partner offers</a>
+      <a class="active" href="/ai/">AI finder</a>
+      <a href="/stores/">Stores</a>
+    </nav>
+    <a class="nav-cta" href="/deals/">Browse manually</a>
+  </header>
+
+  <main class="ai-shell section-shell">
+    <section class="ai-intro reveal visible">
+      <span class="eyebrow mini">AI deal finder</span>
+      <h1>Tell us what you need. We’ll search DiscountHub for you.</h1>
+      <p>Describe a product, budget, store or type of offer. The assistant searches current product deals, promo codes and curated partner offers from the DiscountHub database.</p>
+      <div class="ai-trust-row" aria-label="Assistant safeguards">
+        <span>No registration</span>
+        <span>Current DiscountHub data</span>
+        <span>No invented offers</span>
+      </div>
+    </section>
+
+    <section class="ai-workspace" aria-label="DiscountHub AI assistant">
+      <aside class="ai-guide">
+        <div class="ai-guide-icon" aria-hidden="true">%</div>
+        <h2>Ask naturally</h2>
+        <p>Try a full request instead of manually setting every filter.</p>
+        <div class="ai-examples">
+          <button type="button" data-prompt="Find wireless headphones under $50 with the biggest discount">Wireless headphones under $50</button>
+          <button type="button" data-prompt="Show me useful promo codes for online shopping">Promo codes for shopping</button>
+          <button type="button" data-prompt="Find a lifetime software deal for a small business">Lifetime software for business</button>
+        </div>
+        <div class="ai-guide-note">
+          <strong>Private by design</strong>
+          <span>No account is created. Recent context is stored in this browser session and sent only when needed to answer your request.</span>
+        </div>
+      </aside>
+
+      <div class="ai-chat-card">
+        <div class="ai-chat-head">
+          <div class="ai-avatar" aria-hidden="true">AI</div>
+          <div>
+            <strong>DiscountHub Assistant</strong>
+            <span id="ai-status">Ready to search current offers</span>
+          </div>
+          <button class="ai-reset" id="ai-reset" type="button" aria-label="Start a new conversation">New chat</button>
+        </div>
+
+        <div class="ai-messages" id="ai-messages" role="log" aria-live="polite" aria-relevant="additions">
+          <div class="ai-message assistant">
+            <div class="ai-bubble">
+              <p>Hi! Tell me what you want to buy or which kind of discount you need. You can include a budget, store, country or minimum discount.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-suggestions" id="ai-suggestions" aria-label="Suggested questions">
+          <button type="button" data-prompt="Tech deals under $50">Tech deals under $50</button>
+          <button type="button" data-prompt="Promo codes for online shopping">Shopping promo codes</button>
+          <button type="button" data-prompt="Lifetime partner offers">Lifetime partner offers</button>
+        </div>
+
+        <form class="ai-form" id="ai-form">
+          <label class="sr-only" for="ai-input">Describe what you want</label>
+          <textarea id="ai-input" name="message" rows="1" maxlength="500" placeholder="Example: I need a useful gift for a programmer under $40…" required></textarea>
+          <button id="ai-send" type="submit">
+            <span>Send</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L16 12 3.5 13.9l-.1 6.5Z"/></svg>
+          </button>
+        </form>
+        <p class="ai-fine-print">No sign-up required. Do not enter personal, payment or confidential information.</p>
+      </div>
+    </section>
+
+    <section class="ai-manual-fallback">
+      <div>
+        <span class="eyebrow mini">Prefer filters?</span>
+        <h2>You can always browse DiscountHub manually.</h2>
+        <p>The normal deal, promo-code and partner-offer pages remain available even when the free AI provider reaches its temporary limit.</p>
+      </div>
+      <div class="ai-fallback-links">
+        <a href="/deals/">Browse deals</a>
+        <a href="/promo-codes/">View promo codes</a>
+        <a href="/partner-offers/">Partner offers</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer section-shell">
+    <a class="brand small" href="/">
+      <img src="../assets/icon-180.png" alt="DiscountHub logo" />
+      <span>Discount<span>Hub</span></span>
+    </a>
+    <div class="footer-links">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+  </footer>
+
+  <script src="ai.js?v=20260713-ai-finder"></script>
+</body>
+</html>
