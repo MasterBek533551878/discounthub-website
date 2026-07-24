@@ -15,7 +15,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" href="/assets/icon-180.png" />
-  <link rel="stylesheet" href="/styles.css?v=20260711-share-social-buttons" />
+  <link rel="stylesheet" href="/styles.css?v=20260724-country-ai-nav-v2" />
 </head>
 <body class="seo-page web-product-page">
   <div class="percent-layer" aria-hidden="true"></div>
@@ -32,11 +32,12 @@
     <nav class="nav-links" aria-label="Primary navigation">
       <a href="/deals/">Deals</a>
       <a class="active" href="/promo-codes/">Promo codes</a>
+      <a href="/ai/">AI finder</a>
       <a href="/stores/">Stores</a>
       <a href="/partner-offers/">Partners</a>
       <a href="/#download">App</a>
     </nav>
-    <a class="nav-cta magnetic" href="/deals/">Browse web</a>
+    <a class="nav-cta magnetic" href="/ai/">AI finder</a>
   </header>
 
   <main>
@@ -62,10 +63,16 @@
           <a class="panel-link" href="/stores/">Browse stores</a>
         </div>
 
-        <form class="browser-controls" id="promotions-controls">
+        <form class="browser-controls browser-controls-promotions" id="promotions-controls">
           <label>
             Search
             <input type="search" name="q" placeholder="first order, flash sale, Alibaba..." autocomplete="off" />
+          </label>
+          <label>
+            Country
+            <select name="country" id="promotion-country-filter">
+              <option value="">All countries</option>
+            </select>
           </label>
           <label>
             Store
@@ -126,6 +133,6 @@
     </div>
   </footer>
 
-  <script src="/script.js?v=20260711-share-icons-only"></script>
+  <script src="/script.js?v=20260724-country-ai-nav-v2"></script>
 </body>
 </html>

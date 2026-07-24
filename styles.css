@@ -1620,3 +1620,28 @@ body{letter-spacing:0;}
 .copy-link-btn{cursor:pointer}
 .compact-actions .share-inline-group{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.compact-actions .share-icon-btn{min-height:38px;min-width:38px;padding:8px 10px;border-radius:14px}.compact-actions .share-offer-btn{min-height:38px;padding:8px 12px;border-radius:14px}
 @media (max-width:760px){.offer-actions .share-inline-group,.web-actions .share-inline-group,.compact-actions .share-inline-group{width:100%}}
+
+/* v20260724: country filters and AI-first navigation */
+.browser-controls-deals{
+  grid-template-columns:minmax(210px,1.25fr) minmax(170px,.8fr) minmax(170px,1fr) minmax(170px,1fr) minmax(145px,.72fr) minmax(160px,.82fr) auto;
+}
+.browser-controls-promotions{
+  grid-template-columns:minmax(210px,1.3fr) minmax(170px,.82fr) minmax(180px,1fr) minmax(150px,.78fr) minmax(160px,.82fr) auto;
+}
+.nav-links a[href="/ai/"]{
+  color:#62efff;
+}
+@media (max-width:1380px){
+  .browser-controls-deals,
+  .browser-controls-promotions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .browser-controls-deals .browser-actions,
+  .browser-controls-promotions .browser-actions{grid-column:1/-1}
+}
+@media (max-width:900px){
+  .browser-controls-deals,
+  .browser-controls-promotions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .browser-controls-deals,
+  .browser-controls-promotions{grid-template-columns:1fr}
+}

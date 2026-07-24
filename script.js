@@ -101,6 +101,47 @@ document.querySelectorAll('.magnetic').forEach((el) => {
 // The homepage stays curated, while full browsing lives on the web pages.
 const DISCOUNTHUB_API_BASE_URL = 'https://api.discounthub.uz';
 const APP_DOWNLOAD_ANCHOR = '#download';
+const COUNTRY_STORAGE_KEY = 'discounthub_country';
+
+function normalizeCountryCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : '';
+}
+
+function getStoredCountry() {
+  try {
+    return normalizeCountryCode(localStorage.getItem(COUNTRY_STORAGE_KEY));
+  } catch (_) {
+    return '';
+  }
+}
+
+function setStoredCountry(value) {
+  const code = normalizeCountryCode(value);
+  try {
+    if (code) localStorage.setItem(COUNTRY_STORAGE_KEY, code);
+    else localStorage.removeItem(COUNTRY_STORAGE_KEY);
+  } catch (_) {}
+  return code;
+}
+
+function ensureAiFinderNavigation() {
+  const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+  const nav = document.querySelector('.nav-links');
+  if (nav && !nav.querySelector('a[href="/ai/"]')) {
+    const link = document.createElement('a');
+    link.href = '/ai/';
+    link.textContent = 'AI finder';
+    nav.insertBefore(link, nav.querySelector('a[href="/stores/"]'));
+  }
+
+  const cta = document.querySelector('.nav-cta');
+  if (cta && currentPath !== '/ai') {
+    cta.href = '/ai/';
+    cta.textContent = 'AI finder';
+    cta.setAttribute('aria-label', 'Open DiscountHub AI Finder');
+  }
+}
 
 const livePreviewState = {
   fetchedAt: null,
@@ -539,7 +580,7 @@ function facetCategoryCandidates(facets, slot) {
   return candidates.slice(0, 4);
 }
 
-async function fetchCategorySlot(slot, facets, existingItems = []) {
+async function fetchCategorySlot(slot, facets, existingItems = [], country = '') {
   const usedIds = new Set(existingItems.map(itemId).filter(Boolean));
   const usedStoreKeys = new Set(existingItems.map((item) => normalizeKey(dealStoreName(item))).filter(Boolean));
   const categoryCandidates = facetCategoryCandidates(facets, slot);
@@ -550,6 +591,7 @@ async function fetchCategorySlot(slot, facets, existingItems = []) {
       page_size: 8,
       sort: 'discount_desc',
       currency: 'USD',
+      country,
       category,
     }));
   });
@@ -559,6 +601,7 @@ async function fetchCategorySlot(slot, facets, existingItems = []) {
       page_size: 8,
       sort: 'score_desc',
       currency: 'USD',
+      country,
       q,
     }));
   });
@@ -588,13 +631,13 @@ async function fetchCategorySlot(slot, facets, existingItems = []) {
   return choice || null;
 }
 
-async function fetchCategorySlotDeals(facets, existingItems = []) {
+async function fetchCategorySlotDeals(facets, existingItems = [], country = '') {
   const selected = [];
   const usedItems = Array.isArray(existingItems) ? [...existingItems] : [];
 
   for (const slot of DEAL_CATEGORY_SLOT_REQUESTS) {
     try {
-      const choice = await fetchCategorySlot(slot, facets, [...usedItems, ...selected]);
+      const choice = await fetchCategorySlot(slot, facets, [...usedItems, ...selected], country);
       if (!choice) continue;
       selected.push(choice);
     } catch (_) {
@@ -794,12 +837,13 @@ function promoStoreCandidatesFromFacets(storeFacets) {
   return candidates.slice(0, PROMO_STORE_CANDIDATE_LIMIT);
 }
 
-async function fetchDiverseDeals(facets) {
+async function fetchDiverseDeals(facets, country = '') {
   const platforms = platformCandidatesFromFacets(facets);
   const generalPromise = fetchJson('/deals', {
     page_size: 40,
     sort: 'newest',
     currency: 'USD',
+    country,
   });
   let perStoreDeals = [];
   if (platforms.length) {
@@ -807,6 +851,7 @@ async function fetchDiverseDeals(facets) {
       page_size: DEALS_PER_PLATFORM_REQUEST,
       sort: 'newest',
       currency: 'USD',
+      country,
       platform,
     })));
 
@@ -826,7 +871,7 @@ async function fetchDiverseDeals(facets) {
 
   const coreLimit = Math.max(1, DEAL_PREVIEW_LIMIT - DEAL_CATEGORY_SLOT_REQUESTS.length);
   const coreDeals = mergeDiverseDeals(perStoreDeals, generalItems, coreLimit);
-  const categoryDeals = await fetchCategorySlotDeals(facets, coreDeals);
+  const categoryDeals = await fetchCategorySlotDeals(facets, coreDeals, country);
   const selected = [...coreDeals, ...categoryDeals];
 
   if (selected.length >= DEAL_PREVIEW_LIMIT) {
@@ -837,11 +882,12 @@ async function fetchDiverseDeals(facets) {
 }
 
 
-async function fetchDiversePromotions(storeFacets) {
+async function fetchDiversePromotions(storeFacets, country = '') {
   const stores = promoStoreCandidatesFromFacets(storeFacets);
   const generalPromise = fetchJson('/promotions', {
     page_size: 30,
     sort: 'featured',
+    country,
   });
 
   if (!stores.length) {
@@ -852,6 +898,7 @@ async function fetchDiversePromotions(storeFacets) {
   const storeResults = await Promise.allSettled(stores.map((store) => fetchJson('/promotions', {
     page_size: PROMOS_PER_STORE_REQUEST,
     sort: 'featured',
+    country,
     store,
   })));
 
@@ -879,10 +926,11 @@ function refreshRevealAnimations() {
 async function loadLivePreview() {
   const liveContainers = document.querySelectorAll('[data-live-list]');
   if (!liveContainers.length) return;
+  const country = getStoredCountry();
 
   try {
     const [facets, promotionStores, partnerOffers] = await Promise.allSettled([
-      fetchJson('/deals/facets', { currency: 'USD' }),
+      fetchJson('/deals/facets', { currency: 'USD', country }),
       fetchJson('/promotions/stores'),
       fetchJson('/partner-offers', { page_size: 4, sort: 'featured' }),
     ]);
@@ -893,14 +941,14 @@ async function loadLivePreview() {
     if (facetsValue) renderStoreCloud(facetsValue);
 
     try {
-      const diverseDeals = await fetchDiverseDeals(facetsValue);
+      const diverseDeals = await fetchDiverseDeals(facetsValue, country);
       renderDealCards(diverseDeals);
     } catch (_) {
       showPreviewError(document.getElementById('latest-deals'), 'Deals preview');
     }
 
     try {
-      const diversePromotions = await fetchDiversePromotions(promotionStoresValue);
+      const diversePromotions = await fetchDiversePromotions(promotionStoresValue, country);
       renderPromotionCards(diversePromotions);
     } catch (_) {
       showPreviewError(document.getElementById('featured-promotions'), 'Promo codes preview');
@@ -936,6 +984,16 @@ const fullBrowserState = {
 
 function getQueryParams() {
   return new URLSearchParams(window.location.search || '');
+}
+
+function restoreCountrySelection(form) {
+  if (!form) return '';
+  const field = form.elements?.country;
+  if (!field) return '';
+  const urlCountry = normalizeCountryCode(getQueryParams().get('country'));
+  const country = urlCountry || getStoredCountry();
+  if (country) field.value = country;
+  return country;
 }
 
 function setFormFromUrl(form) {
@@ -986,6 +1044,24 @@ function populateFacetSelect(select, items) {
     values.push({ name, count });
   });
   select.innerHTML = first + values.map((item) => optionMarkup(item.name, item.count)).join('');
+}
+
+function populateCountrySelect(select, items) {
+  if (!select || !Array.isArray(items)) return;
+  const first = select.querySelector('option')?.outerHTML || '<option value="">All countries</option>';
+  const values = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    const id = normalizeCountryCode(getField(item, 'id', 'id', ''));
+    const name = String(getField(item, 'name', 'name', id)).trim() || id;
+    const count = Number(getField(item, 'count', 'count', 0));
+    if (!id || seen.has(id) || count <= 0) return;
+    seen.add(id);
+    values.push({ id, name, count });
+  });
+  select.innerHTML = first + values
+    .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.name} (${item.count})`)}</option>`)
+    .join('');
 }
 
 function setStatus(id, text) {
@@ -1150,11 +1226,14 @@ async function initDealsBrowser() {
   const sharedDealId = String(getQueryParams().get('deal_id') || '').trim();
 
   setFormFromUrl(form);
+  restoreCountrySelection(form);
   try {
     const facets = await fetchJson('/deals/facets', { currency: 'USD' });
+    populateCountrySelect(document.getElementById('deal-country-filter'), facets.countries);
     populateFacetSelect(document.getElementById('deal-platform-filter'), facets.marketplaces);
     populateFacetSelect(document.getElementById('deal-category-filter'), facets.categories);
     setFormFromUrl(form);
+    restoreCountrySelection(form);
   } catch (_) {}
 
   async function load(reset = false) {
@@ -1164,6 +1243,7 @@ async function initDealsBrowser() {
       state.page = 1;
       container.innerHTML = '';
       state.params = readFormParams(form);
+      setStoredCountry(state.params.country || '');
       updateBrowserUrl(state.params);
     }
     setStatus('deals-status', state.page === 1 ? 'Loading deals…' : 'Loading more deals…');
@@ -1205,7 +1285,7 @@ async function initDealsBrowser() {
   }
 
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
-  document.getElementById('deals-clear')?.addEventListener('click', () => { form.reset(); load(true); });
+  document.getElementById('deals-clear')?.addEventListener('click', () => { form.reset(); setStoredCountry(''); load(true); });
   document.getElementById('deals-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
 
   if (sharedDealId) await loadSharedDeal(sharedDealId);
@@ -1220,10 +1300,16 @@ async function initPromotionsBrowser() {
   const sharedPromotionId = String(getQueryParams().get('promotion_id') || '').trim();
 
   setFormFromUrl(form);
+  restoreCountrySelection(form);
   try {
-    const stores = await fetchJson('/promotions/stores');
+    const [stores, countries] = await Promise.all([
+      fetchJson('/promotions/stores'),
+      fetchJson('/promotions/countries'),
+    ]);
+    populateCountrySelect(document.getElementById('promotion-country-filter'), countries.items);
     populateFacetSelect(document.getElementById('promotion-store-filter'), stores.items);
     setFormFromUrl(form);
+    restoreCountrySelection(form);
   } catch (_) {}
 
   async function load(reset = false) {
@@ -1233,6 +1319,7 @@ async function initPromotionsBrowser() {
       state.page = 1;
       container.innerHTML = '';
       state.params = readFormParams(form);
+      setStoredCountry(state.params.country || '');
       updateBrowserUrl(state.params);
     }
     setStatus('promotions-status', state.page === 1 ? 'Loading promo codes…' : 'Loading more promotions…');
@@ -1274,7 +1361,7 @@ async function initPromotionsBrowser() {
   }
 
   form.addEventListener('submit', (event) => { event.preventDefault(); load(true); });
-  document.getElementById('promotions-clear')?.addEventListener('click', () => { form.reset(); load(true); });
+  document.getElementById('promotions-clear')?.addEventListener('click', () => { form.reset(); setStoredCountry(''); load(true); });
   document.getElementById('promotions-load-more')?.addEventListener('click', () => { if (!state.loading && state.hasNext) load(false); });
 
   if (sharedPromotionId) await loadSharedPromotion(sharedPromotionId);
@@ -1343,8 +1430,15 @@ function renderStoreDirectory(items, q = '') {
   }
   container.innerHTML = filtered.map((item) => {
     const name = item.name;
-    const dealUrl = `/deals/?platform=${encodeURIComponent(name)}`;
-    const promoUrl = `/promo-codes/?store=${encodeURIComponent(name)}`;
+    const country = getStoredCountry();
+    const dealParams = new URLSearchParams({ platform: name });
+    const promoParams = new URLSearchParams({ store: name });
+    if (country) {
+      dealParams.set('country', country);
+      promoParams.set('country', country);
+    }
+    const dealUrl = `/deals/?${dealParams.toString()}`;
+    const promoUrl = `/promo-codes/?${promoParams.toString()}`;
     return `<article class="store-directory-card reveal visible">
       <div class="web-meta"><span>Store</span><span class="type-pill">${escapeHtml(storeSlug(name))}</span></div>
       <h3>${escapeHtml(name)}</h3>
@@ -1417,6 +1511,7 @@ document.addEventListener('click', (event) => {
 });
 
 function initFullWebPages() {
+  ensureAiFinderNavigation();
   initDealsBrowser();
   initPromotionsBrowser();
   initPartnerBrowser();
