@@ -1174,6 +1174,11 @@ function partnerCardMarkup(offer) {
   const verified = Boolean(getField(offer, 'verified', 'verified', false));
   const imageUrl = String(getField(offer, 'imageUrl', 'image_url', '') || '').trim();
   const validUntil = formatPartnerDate(getField(offer, 'validUntil', 'valid_until', ''));
+  const expiryPriceText = validUntil ? `Ends ${validUntil}` : '';
+  const currentPriceIsExpiry = Boolean(
+    expiryPriceText &&
+    currentPrice.toLowerCase() === expiryPriceText.toLowerCase()
+  );
   const target = clickUrl('partner', id);
 
   const imageMarkup = imageUrl ? `
@@ -1189,7 +1194,7 @@ function partnerCardMarkup(offer) {
       <h3>${escapeHtml(title || 'Partner offer')}</h3>
       <p>${escapeHtml(subtitle || offerText || 'Open the partner offer to view details.')}</p>
       ${currentPrice || originalPrice ? `<div class="web-price-row">${currentPrice ? `<strong>${escapeHtml(currentPrice)}</strong>` : ''}${originalPrice ? `<span>${escapeHtml(originalPrice)}</span>` : ''}</div>` : ''}
-      ${validUntil ? `<div class="partner-validity">Valid until ${escapeHtml(validUntil)}</div>` : ''}
+      ${validUntil && !currentPriceIsExpiry ? `<div class="partner-validity">Valid until ${escapeHtml(validUntil)}</div>` : ''}
       <div class="web-actions">
         ${code ? `<span class="promo-code-pill">${escapeHtml(code)}</span><button class="copy-code-btn" type="button" data-copy-code="${escapeHtml(code)}">Copy code</button>` : ''}
         <a href="${target}" target="_blank" rel="noopener noreferrer">Open offer</a>
