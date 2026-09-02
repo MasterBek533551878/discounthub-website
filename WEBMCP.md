@@ -62,9 +62,17 @@ The 15 tool tests pass. The user also ran the live API check successfully on Win
 at commit `fe9fe0e` on 2026-09-02: deals returned 3 of 4203, coupons 3 of 125,
 store deals 3 of 499, and largest discounts 3 of 3758. The chosen store had no
 promotions. The user's local Chrome preview subsequently loaded 24 of 4203 deals and
-reported four registered native tools. The first native invocation rejected an object
-argument with `Failed to parse input arguments`; successful native execution and
-actual agent execution remain unverified.
+reported four registered native tools. On 2026-09-02, user-provided screenshots confirmed
+native discovery with `getTools()` and successful `executeTool` calls for all four tools:
+
+- `search_deals`: status `ok`, 3 deals at 20%+ discount, rendered in Your deal search.
+- `get_store_offers` for AliExpress FR: status `ok`, 3 deals and 0 promotions.
+- `get_best_deals`: status `ok`, 3 deals.
+- `find_promo_codes`: status `ok`, 3 promotions with visible coupon codes and cards.
+
+Chrome required JSON-string arguments as documented below. These checks establish
+native browser execution and shared results in the local preview. An actual browser
+agent session and verification on the production domain remain pending.
 
 ## Local preview with live data
 
@@ -162,6 +170,13 @@ use the existing Cloudflare Pages release process from the website directory:
 npx --yes wrangler pages deploy . --project-name discounthub-website
 ```
 
+When deploying from a detached release worktree, explicitly add `--branch main` so
+Wrangler targets the production branch. First record the current production deployment
+with `npx --yes wrangler pages deployment list --project-name discounthub-website
+--environment production`; that immutable deployment is the rollback copy. Keep local
+backups outside the upload directory. `.cfignore` excludes development scripts, tests,
+caches, documentation and backup files from the published static assets.
+
 Verify the deployed `/webmcp.js`, the new `script.js?v=20260902-webmcp-v1` references,
 native registration and the real search result. Roll back using the previous Cloudflare
 Pages deployment if needed. No backend deployment or mobile build is required by the
@@ -170,5 +185,5 @@ API contract used here; a preview-specific CORS change, if necessary, is separat
 The user has made both existing repositories public and merged an MIT license into
 each default branch. Use `MasterBek533551878/discounthub-website` for the website and
 WebMCP source, and `MasterBek533551878/discounthub` for the Flutter application and
-backend source. This draft has not been deployed and no demo video or Devpost
+backend source. This change has not been deployed and no demo video or Devpost
 submission has been completed.
