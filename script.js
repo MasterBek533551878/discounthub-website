@@ -1528,3 +1528,68 @@ if (document.readyState === 'loading') {
 } else {
   initFullWebPages();
 }
+
+// WebMCP shares the existing catalogue with a browser agent and the person
+// viewing the page. The ordinary browsing flow remains available in every browser.
+function renderWebMcpResults(result) {
+  const main = document.querySelector('main');
+  if (!main) return;
+  let panel = document.getElementById('webmcp-results');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = 'webmcp-results';
+    panel.className = 'section-shell';
+    panel.setAttribute('aria-labelledby', 'webmcp-results-title');
+    panel.style.paddingBlock = '32px';
+    main.prepend(panel);
+  }
+  const labels = { search_deals: 'Your deal search', find_promo_codes: 'Your promo codes', get_store_offers: 'Your store offers', get_best_deals: 'Largest percentage discounts' };
+  const count = result.collections.reduce((sum, group) => sum + group.returned, 0);
+  const status = result.status === 'error' ? 'Search could not be completed.' : `${count} offers found${result.status === 'partial' ? ' · Some results are unavailable.' : '.'}`;
+  panel.innerHTML = `<div class="section-head"><h2 id="webmcp-results-title">${escapeHtml(labels[result.tool] || 'Your search results')}</h2><p role="status">${escapeHtml(status)}</p></div>`;
+  if (result.filters) {
+    const details = Object.entries(result.filters).map(([key, value]) => `${key.replaceAll('_', ' ')}: ${value}`).join(' · ');
+    const summary = document.createElement('p');
+    summary.textContent = details;
+    panel.append(summary);
+  }
+  for (const group of result.collections) {
+    const section = document.createElement('div');
+    const title = document.createElement('h3');
+    title.textContent = group.kind === 'deals' ? 'Discounts' : 'Promo codes and promotions';
+    section.append(title);
+    const grid = document.createElement('div');
+    grid.className = group.kind === 'deals' ? 'web-offer-grid' : 'web-list-grid';
+    if (group.items.length) grid.innerHTML = group.items.map(group.kind === 'deals' ? dealCardMarkup : promoCardMarkup).join('');
+    else renderEmpty(grid, 'No matching offers on this page', 'Try different keywords, filters or the next page if available.');
+    section.append(grid);
+    const paging = document.createElement('p');
+    paging.textContent = `Page ${group.page} · ${group.returned} shown${group.has_next_page ? ' · More pages available; ask your assistant to continue.' : ''}`;
+    section.append(paging);
+    panel.append(section);
+  }
+  for (const error of result.errors) {
+    const message = document.createElement('p');
+    message.textContent = `${error.kind ? error.kind + ': ' : ''}${error.message}`;
+    panel.append(message);
+  }
+  const note = document.createElement('p');
+  note.textContent = 'Check availability, delivery costs and coupon terms at the store. Search results do not confirm a checkout price.';
+  panel.append(note);
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'copy-code-btn';
+  dismiss.textContent = 'Dismiss search results';
+  dismiss.addEventListener('click', () => panel.remove());
+  panel.append(dismiss);
+  panel.scrollIntoView({ behavior: 'instant', block: 'start' });
+}
+
+window.discountHubWebMcpReady = import('/webmcp.js?v=20260902-webmcp-v1').then(async ({ createTools, registerTools, detectContext }) => {
+  const tools = createTools({ onResult: renderWebMcpResults });
+  // This diagnostic handle runs the same callbacks; it is not a WebMCP polyfill.
+  window.discountHubWebMcp = { tools };
+  const result = await registerTools(detectContext(document, navigator), tools);
+  window.discountHubWebMcp.status = result;
+  return result;
+}).catch(() => ({ status: 'error', tools: [], message: 'Could not load the WebMCP module.' }));
