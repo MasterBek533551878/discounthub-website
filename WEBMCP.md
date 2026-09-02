@@ -167,15 +167,23 @@ Back up the current website files before overwriting them. After review and merg
 use the existing Cloudflare Pages release process from the website directory:
 
 ```powershell
-npx --yes wrangler pages deploy . --project-name discounthub-website
+$pagesDir = py -3 scripts/build_pages.py
+if ($LASTEXITCODE -ne 0) { throw "Website packaging failed" }
+npx --yes wrangler pages deploy "$pagesDir" --project-name discounthub-website --branch main
 ```
 
-When deploying from a detached release worktree, explicitly add `--branch main` so
-Wrangler targets the production branch. First record the current production deployment
+The builder copies only tracked website assets into a fresh directory under ignored
+`dist/`, preserving their bytes and relative paths. It checks required assets and
+does not overwrite previous builds. Deploy that output directory; do not deploy the
+repository root. `.cfignore` did not exclude development files in Wrangler Pages
+4.128.0 and has been removed. Tests, scripts, documentation and backups are not copied
+to the output. When adding a new website directory, update the builder's allowlist.
+
+Explicitly use `--branch main` from a detached release worktree so Wrangler targets
+the production branch. First record the current production deployment
 with `npx --yes wrangler pages deployment list --project-name discounthub-website
 --environment production`; that immutable deployment is the rollback copy. Keep local
-backups outside the upload directory. `.cfignore` excludes development scripts, tests,
-caches, documentation and backup files from the published static assets.
+backups outside the upload directory.
 
 Verify the deployed `/webmcp.js`, the new `script.js?v=20260902-webmcp-v1` references,
 native registration and the real search result. Roll back using the previous Cloudflare
@@ -185,5 +193,10 @@ API contract used here; a preview-specific CORS change, if necessary, is separat
 The user has made both existing repositories public and merged an MIT license into
 each default branch. Use `MasterBek533551878/discounthub-website` for the website and
 WebMCP source, and `MasterBek533551878/discounthub` for the Flutter application and
-backend source. This change has not been deployed and no demo video or Devpost
-submission has been completed.
+backend source. Commit `5974475` was deployed on 2026-09-02 as
+`https://d92989c8.discounthub-website.pages.dev`. Checks on `https://discounthub.uz`
+confirmed the updated pages and WebMCP assets, a healthy production API, three deals
+and three coupons, and CORS allowing the production origin. That root-directory
+deployment also included development files, motivating the asset-only builder above.
+The clean replacement deployment and native execution on the production domain still
+need confirmation. No demo video or Devpost submission has been completed.
