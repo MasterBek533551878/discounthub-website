@@ -31,10 +31,12 @@
   }
 
   function getSessionId() {
-    const current = sessionStorage.getItem(SESSION_KEY);
-    if (current) return current;
+    try {
+      const current = sessionStorage.getItem(SESSION_KEY);
+      if (current) return current;
+    } catch (_) {}
     const value = window.crypto?.randomUUID?.() || `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    sessionStorage.setItem(SESSION_KEY, value);
+    try { sessionStorage.setItem(SESSION_KEY, value); } catch (_) {}
     return value;
   }
 
@@ -43,7 +45,7 @@
     if (!clean) return;
     history.push({ role, content: clean });
     history = history.slice(-MAX_HISTORY);
-    sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (_) {}
   }
 
   function setBusy(value) {
@@ -299,7 +301,7 @@
   });
   reset?.addEventListener('click', () => {
     history = [];
-    sessionStorage.removeItem(HISTORY_KEY);
+    try { sessionStorage.removeItem(HISTORY_KEY); } catch (_) {}
     messages.replaceChildren();
     addMessage('assistant', 'New chat started. What would you like me to find?');
     renderSuggestions(['Tech deals under $50', 'Shopping promo codes', 'Lifetime partner offers']);
@@ -307,5 +309,12 @@
     input.focus();
   });
 
+  // Show the same context that will be sent to the assistant after navigating
+  // away and back. Restoring text does not pretend to restore live offer cards.
+  if (history.length) {
+    messages.replaceChildren();
+    history.forEach(({ role, content }) => addMessage(role, content));
+    addMessage('assistant', 'Conversation restored. Ask a follow-up to refresh the offers.');
+  }
   resize();
 })();

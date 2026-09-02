@@ -22,14 +22,16 @@ window.addEventListener('pointermove', (event) => {
   }
 });
 
-const observer = new IntersectionObserver((entries) => {
+const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (entry.isIntersecting) {
       entry.target.classList.add('visible');
       observer.unobserve(entry.target);
     }
   });
-}, { threshold: 0.14 });
+// A catalogue may grow to many screens before its first intersection. Waiting
+// for a percentage of its height can leave the whole page permanently hidden.
+}, { threshold: 0 }) : { observe: (el) => el.classList.add('visible') };
 
 document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 
