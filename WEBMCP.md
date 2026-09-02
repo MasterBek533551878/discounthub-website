@@ -61,7 +61,10 @@ WebMCP support and it does not test merchant checkout or outbound clicks.
 The 15 tool tests pass. The user also ran the live API check successfully on Windows
 at commit `fe9fe0e` on 2026-09-02: deals returned 3 of 4203, coupons 3 of 125,
 store deals 3 of 499, and largest discounts 3 of 3758. The chosen store had no
-promotions. Native browser registration and actual agent execution remain unverified.
+promotions. The user's local Chrome preview subsequently loaded 24 of 4203 deals and
+reported four registered native tools. The first native invocation rejected an object
+argument with `Failed to parse input arguments`; successful native execution and
+actual agent execution remain unverified.
 
 ## Local preview with live data
 
@@ -106,15 +109,27 @@ await window.discountHubWebMcpReady
 Expect `status: 'registered'` and the four tool names. `unsupported` means this browser
 does not expose native WebMCP. `error` requires checking the console and script requests.
 
-On a browser implementing the current draft, verify native discovery and execution:
+For the Chrome implementation that rejects object arguments with
+`Failed to parse input arguments`, verify native discovery and execution using a
+JSON string. Pass the tool object returned by `getTools()` as the first argument:
 
 ```javascript
-const mc = document.modelContext || navigator.modelContext;
-const available = await mc.getTools();
-const search = available.find(tool => tool.name === 'search_deals');
-if (!search) throw new Error('search_deals is not discoverable');
-await mc.executeTool(search, { min_discount: 20, limit: 3 });
+await (async () => {
+  await window.discountHubWebMcpReady;
+  const mc = document.modelContext || navigator.modelContext;
+  const available = await mc.getTools();
+  const search = available.find(tool => tool.name === 'search_deals');
+  if (!search) throw new Error('search_deals is not discoverable');
+  return mc.executeTool(search, JSON.stringify({ min_discount: 20, limit: 3 }));
+})();
 ```
+
+The current specification instead takes an object and serializes it internally;
+see [WebMCP issue #243](https://github.com/webmachinelearning/webmcp/issues/243).
+For a browser that implements that revised signature, pass the plain object instead.
+Do not retry arbitrary tool execution errors: the JSON-string workaround addresses
+this specific argument parsing failure. A successful call should render **Your deal
+search** with up to three offers at 20%+ discount and return their structured data.
 
 Then ask the actual browser agent to find discounts on DiscountHub. Confirm its tool
 trace contains `search_deals`, the returned offers match the page's new results section,
